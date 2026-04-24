@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>티밋 - 나에게 딱 맞는 팀</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        #app {
+            width: 390px;
+            height: 844px;
+            background: #fff;
+            position: relative;
+            overflow: hidden;
+            border-radius: 40px;
+            box-shadow: 0 0 0 10px #111, 0 0 0 13px #333,
+                        0 40px 80px rgba(0,0,0,.7),
+                        0 0 60px rgba(249,115,22,.15);
+        }
+        #app::before {
+            content:'';
+            position: absolute; top:0; left:50%; transform:translateX(-50%);
+            width:110px; height:28px;
+            background:#111; border-radius:0 0 18px 18px; z-index:999;
+        }
+
+        .screen {
+            position: absolute; inset: 0;
+            display: none !important;
+            flex-direction: column;
+            background: #fff;
+            overflow: hidden;
+        }
+        .screen.active {
+            display: flex !important;
+            animation: fadeSlide .28s cubic-bezier(.34,1.2,.64,1) forwards;
+        }
+        @keyframes fadeSlide {
+            from { opacity:0; transform:translateX(24px) scale(.98); }
+            to   { opacity:1; transform:translateX(0) scale(1); }
+        }
+        ::-webkit-scrollbar { display:none; }
+
+        /* ── shared ── */
+        .scroll { flex:1; overflow-y:auto; }
+        .pb-nav { padding-bottom:72px; }
+
+        .top-bar {
+            padding: 42px 18px 0;
+            background:#fff;
+            border-bottom:1px solid #f3f4f6;
+            position:sticky; top:0; z-index:40;
+            flex-shrink:0;
+        }
+        .top-row { display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; }
+        .logo { font-size:22px; font-weight:900; color:#f97316; letter-spacing:-1px; }
+        .icon-row { display:flex; gap:14px; }
+        .icon-btn { background:none; border:none; font-size:20px; cursor:pointer; }
+
+        .tabs { display:flex; }
+        .tab {
+            flex:1; text-align:center; padding-bottom:10px;
+            font-size:13px; font-weight:600; color:#9ca3af;
+            cursor:pointer; position:relative; border:none; background:none;
+        }
+        .tab.on { color:#f97316; font-weight:800; }
+        .tab.on::after {
+            content:''; position:absolute; bottom:0; left:15%; right:15%;
+            height:3px; background:#f97316; border-radius:99px;
+        }
+
+        .filter-row {
+            display:flex; gap:7px; overflow-x:auto;
+            padding:10px 16px; background:#fff;
+            border-bottom:1px solid #f3f4f6; flex-shrink:0;
+        }
+        .fbtn {
+            white-space:nowrap; padding:6px 14px;
+            border-radius:99px; font-size:12px; font-weight:600;
+            border:1.5px solid #e5e7eb; color:#6b7280;
+            cursor:pointer; background:#fff; flex-shrink:0;
+        }
+        .fbtn.on { background:#fff7ed; border-color:#f97316; color:#ea580c; }
+
+        .bnav {
+            position:absolute; bottom:0; left:0; right:0; height:72px;
+            background:#fff; border-top:1px solid #f0f0f0;
+            display:flex; align-items:center; justify-content:space-around;
+            padding-bottom:10px;
+            box-shadow:0 -4px 16px rgba(0,0,0,.05); z-index:50;
+        }
+        .ni { display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; }
+        .ni .ic { font-size:22px; }
+        .ni .lb { font-size:10px; font-weight:600; color:#9ca3af; }
+        .ni.on .lb { color:#f97316; }
+
+        /* ── splash ── */
+        .splash {
+            background:linear-gradient(155deg,#ff6b00,#f97316 55%,#ff9a4a);
+            display:flex; flex-direction:column; justify-content:center; align-items:center;
+            padding:40px 32px; height:100%; position:relative; overflow:hidden;
+        }
+        .splash::before {
+            content:''; position:absolute; top:-100px; right:-80px;
+            width:320px; height:320px; background:rgba(255,255,255,.07); border-radius:50%;
+        }
+        .splash::after {
+            content:''; position:absolute; bottom:-80px; left:-60px;
+            width:250px; height:250px; background:rgba(255,255,255,.05); border-radius:50%;
+        }
+        @keyframes floatY { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+        .float { animation:floatY 3s ease-in-out infinite; }
+
+        .btn-white {
+            width:100%; background:#fff; color:#f97316;
+            font-weight:800; font-size:16px; padding:16px; border-radius:18px; border:none;
+            cursor:pointer; transition:all .2s; box-shadow:0 8px 30px rgba(0,0,0,.15);
+        }
+        .btn-white:hover { transform:translateY(-2px); }
+
+        /* ── onboarding ── */
+        .ob-body { flex:1; overflow-y:auto; padding:20px 20px 0; }
+        .ob-foot { background:#fff; padding:16px 20px 28px; border-top:1px solid #f3f4f6; flex-shrink:0; }
+        .step-badge {
+            display:inline-flex; align-items:center; padding:3px 10px;
+            background:#fff7ed; color:#ea580c; border-radius:99px;
+            font-size:11px; font-weight:700; border:1px solid #fed7aa; margin-right:8px;
+        }
+        .period-btn {
+            flex:1; padding:12px 4px; border:1.5px solid #e5e7eb; border-radius:14px;
+            font-size:12px; font-weight:600; color:#6b7280; cursor:pointer; background:#fff;
+            transition:all .2s; text-align:center;
+        }
+        .period-btn.on {
+            background:linear-gradient(135deg,#fff7ed,#ffedd5);
+            border-color:#f97316; color:#ea580c;
+            box-shadow:0 2px 8px rgba(249,115,22,.2);
+        }
+        .ebox {
+            background:linear-gradient(135deg,#fff7ed,#ffedd5);
+            border:1.5px solid #fed7aa; border-radius:18px;
+            padding:18px; text-align:center; margin-top:14px;
+        }
+        input[type=range] {
+            -webkit-appearance:none; width:100%; height:6px;
+            background:linear-gradient(90deg,#f97316 50%,#e5e7eb 50%);
+            border-radius:99px; outline:none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance:none; width:24px; height:24px;
+            background:linear-gradient(135deg,#ff6b00,#f97316);
+            border-radius:50%; cursor:pointer;
+            box-shadow:0 2px 10px rgba(249,115,22,.5); border:3px solid #fff;
+        }
+        .btn-primary {
+            width:100%; background:linear-gradient(135deg,#ff6b00,#f97316);
+            color:#fff; font-weight:800; font-size:15px; padding:15px;
+            border-radius:16px; border:none; cursor:pointer; transition:all .2s;
+            box-shadow:0 4px 20px rgba(249,115,22,.35); letter-spacing:-.3px;
+        }
+        .btn-primary:hover { transform:translateY(-1px); }
+
+        /* ── user cards ── */
+        .ucard {
+            background:#fff; border-radius:20px; padding:16px;
+            border:1.5px solid #f3f4f6; cursor:pointer;
+            transition:all .22s cubic-bezier(.34,1.4,.64,1);
+            box-shadow:0 2px 10px rgba(0,0,0,.05);
+        }
+        .ucard:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,.1); border-color:#fed7aa; }
+        .tchip { font-size:11px; font-weight:700; color:#f97316; background:#fff7ed; padding:2px 7px; border-radius:8px; }
+        .chip  { display:inline-flex; padding:4px 10px; border-radius:99px; font-size:11px; font-weight:600; background:#f3f4f6; color:#6b7280; }
+        .fav   { background:none; border:none; font-size:22px; cursor:pointer; color:#d1d5db; line-height:1; }
+        .fav:hover { color:#f9a8d4; }
+
+        .cbanner {
+            margin:14px 16px 0;
+            background:linear-gradient(130deg,#ff6b00,#f97316 60%,#fb923c);
+            border-radius:20px; padding:14px 16px; color:#fff;
+            cursor:pointer; display:flex; justify-content:space-between; align-items:center;
+            box-shadow:0 6px 20px rgba(249,115,22,.35); transition:all .2s;
+            position:relative; overflow:hidden;
+        }
+        .cbanner::before {
+            content:''; position:absolute; top:-20px; right:-20px;
+            width:80px; height:80px; background:rgba(255,255,255,.1); border-radius:50%;
+        }
+        .cbanner:hover { transform:scale(1.01); }
+
+        /* ── contest cards ── */
+        .ccard {
+            background:#fff; border-radius:20px; padding:20px 20px 16px;
+            box-shadow:0 2px 12px rgba(0,0,0,.06); border:1.5px solid #f3f4f6;
+            transition:all .22s cubic-bezier(.34,1.2,.64,1);
+        }
+        .ccard:hover { transform:translateY(-2px); box-shadow:0 8px 22px rgba(0,0,0,.1); }
+        .cbadge { display:inline-flex; align-items:center; padding:5px 12px; border-radius:99px; font-size:12px; font-weight:700; }
+        .cb-blue   { background:#eff6ff; color:#2563eb; }
+        .cb-green  { background:#ecfdf5; color:#059669; }
+        .cb-red    { background:#fef2f2; color:#dc2626; }
+        .cb-purple { background:#f5f3ff; color:#7c3aed; }
+        .ctitle { font-size:17px; font-weight:800; color:#111827; letter-spacing:-.5px; line-height:1.35; margin:10px 0 5px; }
+        .csub   { font-size:12px; color:#9ca3af; margin-bottom:14px; }
+        .cmrow  {
+            display:flex; align-items:center; justify-content:space-between;
+            background:#f9fafb; border-radius:14px; padding:10px 14px; margin-bottom:14px;
+        }
+        .avstack { display:flex; }
+        .av {
+            width:30px; height:30px; border-radius:50%;
+            border:2.5px solid #fff; display:flex; align-items:center;
+            justify-content:center; font-size:14px;
+        }
+        .av+.av { margin-left:-10px; }
+        .av-more { background:#e5e7eb; color:#6b7280; font-size:10px; font-weight:700; }
+
+        /* primary orange ghost */
+        .join-btn {
+            width:100%; background:#fff8f2; border:1.5px solid #ffcba0;
+            color:#f97316; font-size:14px; font-weight:700; padding:13px;
+            border-radius:14px; cursor:pointer; letter-spacing:-.3px;
+            display:flex; align-items:center; justify-content:center; gap:6px;
+            transition:all .2s;
+        }
+        .join-btn:hover { background:#fff0e0; border-color:#f97316; }
+        /* grey ghost */
+        .join-btn-g {
+            width:100%; background:#f9fafb; border:1.5px solid #e5e7eb;
+            color:#6b7280; font-size:14px; font-weight:700; padding:13px;
+            border-radius:14px; cursor:pointer; letter-spacing:-.3px;
+            display:flex; align-items:center; justify-content:center; gap:6px;
+            transition:all .2s;
+        }
+        .join-btn-g:hover { background:#f3f4f6; }
+
+        /* ── smart curation ── */
+        .sc-bg { background:linear-gradient(160deg,#0f172a 0%,#1e293b 60%,#0f172a 100%); }
+        .sc-hdr {
+            background:rgba(15,23,42,.95); backdrop-filter:blur(10px);
+            padding:44px 16px 14px;
+            display:flex; justify-content:space-between; align-items:center;
+            border-bottom:1px solid rgba(255,255,255,.06);
+            position:sticky; top:0; z-index:40; flex-shrink:0;
+        }
+        .dcard {
+            background:linear-gradient(135deg,#1e293b,#0f172a);
+            border:1px solid rgba(255,255,255,.08);
+            border-radius:24px; padding:20px; position:relative; overflow:hidden;
+        }
+        .dcard::before {
+            content:''; position:absolute; top:0; left:0; right:0;
+            height:2px; background:linear-gradient(90deg,#f97316,#fb923c,#f97316);
+        }
+        .mbadge {
+            background:rgba(249,115,22,.15); border:1.5px solid rgba(249,115,22,.4);
+            color:#fb923c; font-weight:900; padding:6px 12px; border-radius:12px; font-size:14px;
+        }
+        .rrow {
+            display:flex; align-items:flex-start; gap:8px;
+            background:rgba(255,255,255,.05); border-radius:14px; padding:10px 12px;
+        }
+
+        /* ── profile ── */
+        .pav {
+            width:80px; height:80px; border-radius:24px;
+            display:flex; align-items:center; justify-content:center; font-size:36px;
+            border:3px solid #fff; box-shadow:0 8px 25px rgba(0,0,0,.12);
+        }
+        .tbar-track { background:#f3f4f6; height:10px; border-radius:99px; overflow:hidden; }
+        .tbar-fill {
+            height:100%; border-radius:99px;
+            background:linear-gradient(90deg,#fbbf24,#f97316,#dc2626);
+            position:relative; overflow:hidden;
+        }
+        .tbar-fill::after {
+            content:''; position:absolute; top:0; left:-100%; width:50%; height:100%;
+            background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);
+            animation:shim 2s infinite;
+        }
+        @keyframes shim { to { left:200%; } }
+        .revrow {
+            display:flex; justify-content:space-between; align-items:center;
+            background:#f9fafb; border:1px solid #f3f4f6; border-radius:14px; padding:12px 14px;
+        }
+        .chart-sm { position:relative; width:100%; height:140px; }
+    </style>
+</head>
+<body>
+<div id="app">
+
+<!-- ═══════════════════ SPLASH ═══════════════════ -->
+<div id="s-splash" class="screen active">
+  <div class="splash">
+    <div class="float" style="margin-bottom:28px">
+      <svg width="120" height="85" viewBox="0 0 160 110" fill="none">
+        <circle cx="45" cy="20" r="16" fill="white"/>
+        <circle cx="115" cy="20" r="16" fill="white"/>
+        <path fill-rule="evenodd" clip-rule="evenodd"
+          d="M10 50C10 42.268 16.268 36 24 36H66C73.732 36 80 42.268 80 50V58C71.163 58 64 65.163 64 74C64 82.837 71.163 90 80 90V96C80 103.732 73.732 110 66 110H24C16.268 110 10 103.732 10 96V50ZM45 112C52.732 112 59 105.732 59 98C59 90.268 52.732 84 45 84C37.268 84 31 90.268 31 98C31 105.732 37.268 112 45 112Z"
+          fill="white"/>
+        <circle cx="45" cy="110" r="16" fill="#f97316"/>
+        <path d="M84 50C84 42.268 90.268 36 98 36H140C147.732 36 154 42.268 154 50V96C154 103.732 147.732 110 140 110H98C90.268 110 84 103.732 84 96V90C75.163 90 68 82.837 68 74C68 65.163 75.163 58 84 58V50Z"
+          fill="white"/>
+      </svg>
+    </div>
+    <h1 style="font-size:54px;font-weight:900;color:#fff;letter-spacing:-3px;line-height:1;margin-bottom:8px">티밋</h1>
+    <p style="color:rgba(255,255,255,.8);font-size:16px;font-weight:500;margin-bottom:52px">나에게 딱 맞는 팀</p>
+    <button class="btn-white" onclick="nav('s-onboard')">티밋 시작하기</button>
+    <p style="color:rgba(255,255,255,.6);font-size:13px;margin-top:18px;cursor:pointer">이미 계정이 있나요? <u>로그인</u></p>
+    <div style="position:absolute;bottom:70px;right:34px;width:14px;height:14px;background:rgba(255,255,255,.25);border-radius:50%"></div>
+    <div style="position:absolute;top:130px;left:28px;width:9px;height:9px;background:rgba(255,255,255,.2);border-radius:50%"></div>
+    <div style="position:absolute;top:210px;right:44px;width:7px;height:7px;background:rgba(255,255,255,.15);border-radius:50%"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ ONBOARDING ═══════════════════ -->
+<div id="s-onboard" class="screen">
+  <div style="padding:44px 20px 14px;background:#fff;border-bottom:1px solid #f3f4f6;flex-shrink:0">
+    <h2 style="font-size:20px;font-weight:800;color:#111827;letter-spacing:-.5px">나의 협업 성향 프로필</h2>
+    <p style="font-size:12px;color:#9ca3af;margin-top:4px">더 정확한 팀 매칭을 위해 설정해주세요</p>
+  </div>
+  <div class="ob-body">
+    <div style="margin-bottom:26px">
+      <p style="font-size:14px;font-weight:700;color:#1f2937;display:flex;align-items:center;margin-bottom:10px">
+        <span class="step-badge">Step 1</span>공모전 참여 목표 (에너지 레벨)
+      </p>
+      <p style="font-size:12px;color:#9ca3af;margin-bottom:18px">이번 프로젝트에 얼마나 에너지를 쏟을 예정인가요?</p>
+      <input type="range" min="1" max="10" value="5" id="esl" oninput="upEnergy()">
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:#9ca3af;font-weight:600">
+        <span>1</span>
+        <span id="eval" style="color:#f97316;font-size:28px;font-weight:900;line-height:1">5</span>
+        <span>10</span>
+      </div>
+      <div class="ebox" id="ebox">
+        <span id="eicon" style="font-size:22px;display:block;margin-bottom:6px">✨</span>
+        <p id="elabel" style="font-size:13px;font-weight:700;color:#ea580c">"균형 잡힌 페이스로 확실한 성과 달성"</p>
+      </div>
+    </div>
+    <div style="margin-bottom:26px">
+      <p style="font-size:14px;font-weight:700;color:#1f2937;display:flex;align-items:center;margin-bottom:12px">
+        <span class="step-badge">Step 2</span>선호 프로젝트 기간
+      </p>
+      <div style="display:flex;gap:8px">
+        <button class="period-btn on" onclick="pickG(this,'period')">1개월 이내</button>
+        <button class="period-btn" onclick="pickG(this,'period')">3개월 이내</button>
+        <button class="period-btn" onclick="pickG(this,'period')">6개월 이상</button>
+      </div>
+    </div>
+    <div style="margin-bottom:26px">
+      <p style="font-size:14px;font-weight:700;color:#1f2937;display:flex;align-items:center;margin-bottom:12px">
+        <span class="step-badge">Step 3</span>선호 모임 방식
+      </p>
+      <div style="display:flex;gap:8px">
+        <button class="period-btn" onclick="pickG(this,'meet')">온라인</button>
+        <button class="period-btn" onclick="pickG(this,'meet')">오프라인</button>
+        <button class="period-btn on" onclick="pickG(this,'meet')">혼합 (하이브리드)</button>
+      </div>
+    </div>
+  </div>
+  <div class="ob-foot">
+    <button class="btn-primary" onclick="nav('s-col')">티밋 시작하기 →</button>
+  </div>
+</div>
+
+<!-- ═══════════════════ HOME — 동료 찾기 ═══════════════════ -->
+<div id="s-col" class="screen">
+  <div class="top-bar">
+    <div class="top-row">
+      <span class="logo">티밋</span>
+      <div class="icon-row">
+        <button class="icon-btn">🔍</button>
+        <button class="icon-btn">🔔</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab on">👩‍💻 동료 찾기</button>
+      <button class="tab" onclick="nav('s-con')">🏆 공모전 탐색</button>
+    </div>
+  </div>
+  <div class="filter-row">
+    <button class="fbtn">지역 ▼</button>
+    <button class="fbtn">기술 스택 ▼</button>
+    <button class="fbtn on">🔥 에너지 8 이상</button>
+    <button class="fbtn">하이브리드</button>
+    <button class="fbtn">1개월 이내</button>
+  </div>
+  <div class="scroll pb-nav" style="background:#f9fafb">
+    <div class="cbanner" onclick="nav('s-cur')">
+      <div>
+        <p style="font-size:10px;font-weight:700;color:rgba(255,255,255,.75);margin-bottom:4px">💡 티밋 스마트 큐레이션</p>
+        <p style="font-size:13px;font-weight:800;letter-spacing:-.3px">나와 핏(Fit)이 95% 일치하는 동료 발견!</p>
+        <p style="font-size:11px;color:rgba(255,255,255,.7);margin-top:2px">지금 바로 확인해보세요</p>
+      </div>
+      <span style="font-size:24px;font-weight:900">›</span>
+    </div>
+    <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">
+
+      <div class="ucard" onclick="nav('s-prof')">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <div style="width:46px;height:46px;background:#dbeafe;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">👩‍💻</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:14px;font-weight:800;color:#111827">모델링고수</span>
+              <span class="tchip">🌡️ 78°C</span>
+            </div>
+            <p style="font-size:11px;color:#9ca3af;margin-top:2px">서울 마포구 · 하이브리드</p>
+          </div>
+          <button class="fav">🤍</button>
+        </div>
+        <p style="font-size:12px;color:#4b5563;margin-bottom:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">"데이터 분석 프로젝트 완주하실 분! Python, SQL 사용."</p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+          <span class="chip">#데이터분석</span><span class="chip">#Python</span><span class="chip">#SQL</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding-top:10px;border-top:1px solid #f9fafb;font-size:11px;color:#9ca3af;font-weight:600">
+          <span>🔥 목표 8/10</span><span>⏱️ 1개월 이내</span>
+        </div>
+      </div>
+
+      <div class="ucard">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <div style="width:46px;height:46px;background:#dcfce7;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">💡</div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:14px;font-weight:800;color:#111827">기획마스터</span>
+              <span class="tchip">🌡️ 82°C</span>
+            </div>
+            <p style="font-size:11px;color:#9ca3af;margin-top:2px">경기 성남시 · 온라인</p>
+          </div>
+          <button class="fav">🤍</button>
+        </div>
+        <p style="font-size:12px;color:#4b5563;margin-bottom:10px">"해커톤 전문 기획자입니다. 빠른 협업 선호해요."</p>
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <span class="chip">#서비스기획</span><span class="chip">#해커톤</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding-top:10px;border-top:1px solid #f9fafb;font-size:11px;color:#9ca3af;font-weight:600">
+          <span>🔥 목표 9/10</span><span>⏱️ 1주일 이내</span>
+        </div>
+      </div>
+
+      <div class="ucard">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <div style="width:46px;height:46px;background:#ede9fe;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🤖</div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:14px;font-weight:800;color:#111827">프론트엔드봇</span>
+              <span class="tchip">🌡️ 75°C</span>
+            </div>
+            <p style="font-size:11px;color:#9ca3af;margin-top:2px">서울 강남구 · 오프라인</p>
+          </div>
+          <button class="fav">🤍</button>
+        </div>
+        <p style="font-size:12px;color:#4b5563;margin-bottom:10px">"React 기반 웹 프론트엔드 포트폴리오 팀 구합니다."</p>
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <span class="chip">#React</span><span class="chip">#TypeScript</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding-top:10px;border-top:1px solid #f9fafb;font-size:11px;color:#9ca3af;font-weight:600">
+          <span>🔥 목표 6/10</span><span>⏱️ 3개월 이내</span>
+        </div>
+      </div>
+
+      <div class="ucard">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <div style="width:46px;height:46px;background:#fef9c3;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🎤</div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:14px;font-weight:800;color:#111827">발표의신</span>
+              <span class="tchip">🌡️ 88°C</span>
+            </div>
+            <p style="font-size:11px;color:#9ca3af;margin-top:2px">서울 서대문구 · 하이브리드</p>
+          </div>
+          <button class="fav">🤍</button>
+        </div>
+        <p style="font-size:12px;color:#4b5563;margin-bottom:10px">"PPT 제작부터 무대 발표까지 완벽하게 책임집니다."</p>
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <span class="chip">#발표자</span><span class="chip">#PPT</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding-top:10px;border-top:1px solid #f9fafb;font-size:11px;color:#9ca3af;font-weight:600">
+          <span>🔥 목표 10/10</span><span>⏱️ 1개월 이내</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bnav">
+    <div class="ni on"><span class="ic">🏠</span><span class="lb" style="color:#f97316">홈</span></div>
+    <div class="ni"><span class="ic">💬</span><span class="lb">채팅</span></div>
+    <div class="ni"><span class="ic">👤</span><span class="lb">내 프로필</span></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ HOME — 공모전 탐색 ═══════════════════ -->
+<div id="s-con" class="screen">
+  <div class="top-bar">
+    <div class="top-row">
+      <span class="logo">티밋</span>
+      <div class="icon-row">
+        <button class="icon-btn">🔍</button>
+        <button class="icon-btn">🔔</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab" onclick="nav('s-col')">👩‍💻 동료 찾기</button>
+      <button class="tab on">🏆 공모전 탐색</button>
+    </div>
+  </div>
+  <div class="filter-row">
+    <button class="fbtn on">전체</button>
+    <button class="fbtn">정부/공공 (대형)</button>
+    <button class="fbtn">교내/동아리 (소형)</button>
+    <button class="fbtn">IT/개발</button>
+  </div>
+
+  <div class="scroll pb-nav" style="background:#f5f5f7">
+    <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+
+      <!-- Card 1 — featured with member row -->
+      <div class="ccard">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <span class="cbadge cb-blue">D-15 모집마감</span>
+          <button class="fav" style="font-size:22px;color:#c4b5fd">🤍</button>
+        </div>
+        <p class="ctitle">제 10회 공공데이터 활용 해커톤</p>
+        <p class="csub">행정안전부 주최 · 기획/개발/디자인 분야</p>
+        <div class="cmrow">
+          <div class="avstack">
+            <div class="av" style="background:#dbeafe">👩‍💻</div>
+            <div class="av" style="background:#fce7f3">👨‍🎨</div>
+            <div class="av av-more">+12</div>
+          </div>
+          <span style="font-size:12px;color:#6b7280;font-weight:600">14명이 이 대회를 준비 중!</span>
+        </div>
+        <button class="join-btn">팀원 구하기 (글쓰기) ✏️</button>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="ccard">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <span class="cbadge cb-blue">D-28 모집마감</span>
+          <button class="fav" style="font-size:22px;color:#c4b5fd">🤍</button>
+        </div>
+        <p class="ctitle">대학생 마케팅 아이디어 공모전</p>
+        <p class="csub">한국마케팅협회 주최 · 마케팅/광고 분야</p>
+        <button class="join-btn-g">팀원 구하기 (글쓰기) ✏️</button>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="ccard">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <span class="cbadge cb-red">D-5 마감임박</span>
+          <button class="fav" style="font-size:22px;color:#c4b5fd">🤍</button>
+        </div>
+        <p class="ctitle">전국 대학생 프로그래밍 경진대회 (UCPC)</p>
+        <p class="csub">한국대학생프로그래밍경진대회 주최 · 알고리즘</p>
+        <button class="join-btn-g">팀원 구하기 (글쓰기) ✏️</button>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="ccard">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <span class="cbadge cb-purple">D-40 모집예정</span>
+          <button class="fav" style="font-size:22px;color:#c4b5fd">🤍</button>
+        </div>
+        <p class="ctitle">2026 청년 창업 아이디어톤</p>
+        <p class="csub">중소벤처기업부 주최 · 창업/비즈니스 분야</p>
+        <button class="join-btn-g">팀원 구하기 (글쓰기) ✏️</button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="bnav">
+    <div class="ni on"><span class="ic">🏠</span><span class="lb" style="color:#f97316">홈</span></div>
+    <div class="ni"><span class="ic">💬</span><span class="lb">채팅</span></div>
+    <div class="ni"><span class="ic">👤</span><span class="lb">내 프로필</span></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ SMART CURATION ═══════════════════ -->
+<div id="s-cur" class="screen sc-bg">
+  <div class="sc-hdr">
+    <button onclick="nav('s-col')" style="background:rgba(255,255,255,.1);border:none;color:#fff;width:36px;height:36px;border-radius:12px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">‹</button>
+    <h2 style="font-size:16px;font-weight:800;color:#fff;letter-spacing:-.3px">티밋 스마트 매칭</h2>
+    <div style="width:36px"></div>
+  </div>
+  <div class="scroll" style="padding:20px 18px 30px">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:40px;margin-bottom:8px;animation:floatY 3s ease-in-out infinite">💡</div>
+      <h2 style="font-size:20px;font-weight:800;color:#fff;letter-spacing:-.5px;margin-bottom:6px">당신을 위한 <span style="color:#fb923c">Perfect Match!</span></h2>
+      <p style="font-size:12px;color:#9ca3af;line-height:1.6">내 프로필 데이터를 분석하여<br>가장 알맞은 동료를 찾았습니다.</p>
+    </div>
+    <div class="dcard">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:50px;height:50px;background:#fce7f3;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:24px">👨‍🎨</div>
+          <div>
+            <p style="font-size:17px;font-weight:800;color:#fff;letter-spacing:-.3px">디자인천재</p>
+            <p style="font-size:11px;color:#9ca3af;margin-top:2px">UXUI 디자이너 · 마포구</p>
+          </div>
+        </div>
+        <span class="mbadge">Fit 95%</span>
+      </div>
+      <div style="background:rgba(0,0,0,.3);border-radius:16px;padding:10px;margin-bottom:16px;border:1px solid rgba(255,255,255,.06)">
+        <div class="chart-sm"><canvas id="cc"></canvas></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px">
+        <div class="rrow">
+          <span style="color:#4ade80;font-size:14px;flex-shrink:0">✔</span>
+          <div>
+            <p style="font-size:12px;font-weight:700;color:#e5e7eb">목표치(에너지)가 잘 맞아요!</p>
+            <p style="font-size:10px;color:#9ca3af;margin-top:3px">둘 다 8 이상으로 높은 편이에요. 혼신의 힘을 다할 준비 완료!</p>
+          </div>
+        </div>
+        <div class="rrow">
+          <span style="color:#4ade80;font-size:14px;flex-shrink:0">✔</span>
+          <div>
+            <p style="font-size:12px;font-weight:700;color:#e5e7eb">상호 보완적인 기술 스택</p>
+            <p style="font-size:10px;color:#9ca3af;margin-top:3px">나의 #기획 역량과 상대의 #디자인 역량이 완벽한 시너지를 냅니다.</p>
+          </div>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="nav('s-prof')" style="box-shadow:0 0 20px rgba(249,115,22,.4)">상세 프로필 확인하기 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ PROFILE ═══════════════════ -->
+<div id="s-prof" class="screen">
+  <div style="padding:44px 18px 14px;background:#fff;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:40;flex-shrink:0">
+    <button onclick="nav('s-cur')" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280">‹</button>
+    <span style="font-size:15px;font-weight:800;color:#111827">프로필 상세</span>
+    <button class="fav" style="font-size:24px">🤍</button>
+  </div>
+  <div class="scroll" style="padding-bottom:90px">
+    <div style="background:#fff;padding:24px 20px 20px;border-bottom:1px solid #f3f4f6">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+        <div class="pav" style="background:#fce7f3">👨‍🎨</div>
+        <div>
+          <h2 style="font-size:20px;font-weight:900;color:#111827;letter-spacing:-.5px">디자인천재</h2>
+          <p style="font-size:12px;color:#9ca3af;margin-top:4px">응답률 98% · 10분 내 응답</p>
+        </div>
+      </div>
+      <div style="background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1.5px solid #fed7aa;border-radius:20px;padding:18px;margin-bottom:22px;position:relative;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:20px">🔥</span>
+            <span style="font-size:14px;font-weight:700;color:#1f2937">티밋 열정 온도</span>
+          </div>
+          <span style="font-size:24px;font-weight:900;color:#ea580c">85.5°C</span>
+        </div>
+        <div class="tbar-track"><div class="tbar-fill" style="width:85%"></div></div>
+        <p style="font-size:10px;color:#ea580c;font-weight:600;margin-top:8px">프로젝트 완수율 100% | 무임승차 0건</p>
+        <div style="position:absolute;right:-10px;bottom:-10px;font-size:60px;opacity:.08">🔥</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="font-size:14px;font-weight:700;color:#111827">받은 동료 리뷰</span>
+        <span style="font-size:11px;background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:99px;font-weight:600">12건</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:22px">
+        <div class="revrow">
+          <span style="font-size:12px;color:#374151;font-weight:500">💬 연락이 매우 잘 되고 피드백이 빨라요</span>
+          <span style="font-size:12px;font-weight:700;color:#6b7280;white-space:nowrap;margin-left:8px">👍 8</span>
+        </div>
+        <div class="revrow">
+          <span style="font-size:12px;color:#374151;font-weight:500">✨ 맡은 역할을 100% 완수해요</span>
+          <span style="font-size:12px;font-weight:700;color:#6b7280;white-space:nowrap;margin-left:8px">👍 6</span>
+        </div>
+        <div class="revrow">
+          <span style="font-size:12px;color:#374151;font-weight:500">💡 아이디어가 많고 적극적이에요</span>
+          <span style="font-size:12px;font-weight:700;color:#6b7280;white-space:nowrap;margin-left:8px">👍 4</span>
+        </div>
+      </div>
+      <p style="font-size:14px;font-weight:700;color:#111827;margin-bottom:10px">보유 기술</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px">
+        <span style="background:linear-gradient(135deg,#f97316,#fb923c);color:#fff;padding:7px 14px;border-radius:12px;font-size:12px;font-weight:700">#UXUI디자인</span>
+        <span style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;padding:7px 14px;border-radius:12px;font-size:12px;font-weight:600">#Figma</span>
+        <span style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;padding:7px 14px;border-radius:12px;font-size:12px;font-weight:600">#Prototyping</span>
+      </div>
+      <p style="font-size:14px;font-weight:700;color:#111827;margin-bottom:10px">자기소개</p>
+      <div style="background:#f9fafb;border:1px solid #f3f4f6;border-radius:16px;padding:14px;font-size:13px;color:#4b5563;line-height:1.65">
+        "디자인 전공생입니다! 빠른 프로토타이핑에 자신 있으며, 아이디어를 시각화하는 것을 좋아합니다. 소통이 잘 되는 팀을 가장 선호합니다!"
+      </div>
+    </div>
+  </div>
+  <div style="position:absolute;bottom:0;left:0;right:0;background:#fff;padding:14px 18px 28px;border-top:1px solid #f3f4f6;box-shadow:0 -6px 20px rgba(0,0,0,.06)">
+    <button class="btn-primary" style="background:linear-gradient(135deg,#111827,#1f2937);box-shadow:none">💬 동료 제안 채팅 보내기</button>
+  </div>
+</div>
+
+</div><!-- /#app -->
+<script>
+let ci = null;
+function nav(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) {
+    el.classList.add('active');
+    if (id==='s-cur') setTimeout(drawChart,120);
+  }
+}
+function upEnergy() {
+  const v = +document.getElementById('esl').value;
+  document.getElementById('eval').textContent = v;
+  const pct = ((v-1)/9*100).toFixed(0);
+  document.getElementById('esl').style.background =
+    `linear-gradient(90deg,#f97316 ${pct}%,#e5e7eb ${pct}%)`;
+  const box=document.getElementById('ebox'),
+        lbl=document.getElementById('elabel'),
+        ico=document.getElementById('eicon');
+  if(v<=3){
+    lbl.textContent='"부담 없이 즐겁게 경험 쌓기"';
+    lbl.style.color='#15803d'; ico.textContent='🌱';
+    box.style.background='linear-gradient(135deg,#f0fdf4,#dcfce7)';
+    box.style.borderColor='#86efac';
+  } else if(v<=7){
+    lbl.textContent='"균형 잡힌 페이스로 확실한 성과 달성"';
+    lbl.style.color='#ea580c'; ico.textContent='✨';
+    box.style.background='linear-gradient(135deg,#fff7ed,#ffedd5)';
+    box.style.borderColor='#fed7aa';
+  } else {
+    lbl.textContent='"혼신의 힘! 100% 에너지 투여"';
+    lbl.style.color='#dc2626'; ico.textContent='🔥';
+    box.style.background='linear-gradient(135deg,#fff1f2,#ffe4e6)';
+    box.style.borderColor='#fca5a5';
+  }
+}
+function pickG(btn, group) {
+  btn.closest('div').querySelectorAll('.period-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+function drawChart() {
+  const ctx = document.getElementById('cc');
+  if(!ctx) return;
+  if(ci) ci.destroy();
+  ci = new Chart(ctx.getContext('2d'),{
+    type:'radar',
+    data:{
+      labels:['에너지(열정)','오프라인 선호','기간 적합도','스킬 매칭','소통 방식'],
+      datasets:[
+        {label:'나 (기획)',data:[90,80,100,85,90],fill:true,
+         backgroundColor:'rgba(255,255,255,.08)',borderColor:'rgba(255,255,255,.4)',
+         pointBackgroundColor:'#fff',borderWidth:1.5},
+        {label:'상대 (디자인)',data:[95,90,100,95,85],fill:true,
+         backgroundColor:'rgba(249,115,22,.25)',borderColor:'#f97316',
+         pointBackgroundColor:'#f97316',borderWidth:2}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      scales:{r:{angleLines:{color:'rgba(255,255,255,.08)'},grid:{color:'rgba(255,255,255,.08)'},
+                 pointLabels:{font:{size:9,weight:'bold'},color:'#9ca3af'},
+                 ticks:{display:false,min:0,max:100}}},
+      plugins:{legend:{position:'bottom',labels:{font:{size:10},color:'#e5e7eb',usePointStyle:true,padding:12}}}
+    }
+  });
+}
+</script>
+</body>
+</html>
