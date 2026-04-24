@@ -1,13 +1,17 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>티밋 - 나에게 딱 맞는 팀</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Noto Sans KR',sans-serif; background:#f0f0f0; display:flex; justify-content:center; align-items:center; min-height:100vh; padding:0; }
+#app { width:390px; height:844px; background:#fff; position:relative; overflow:hidden; }
+.screen { position:absolute; inset:0; display:flex; flex-direction:column; background:#fff; overflow:hidden; }
+::-webkit-scrollbar { display:none; }
+
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
@@ -47,11 +51,9 @@
         }
         .screen.active {
             display: flex !important;
-            animation: fadeSlide .28s cubic-bezier(.34,1.2,.64,1) forwards;
+            
         }
-        @keyframes fadeSlide {
-            from { opacity:0; transform:translateX(24px) scale(.98); }
-            to   { opacity:1; transform:translateX(0) scale(1); }
+        
         }
         ::-webkit-scrollbar { display:none; }
 
@@ -122,8 +124,8 @@
             content:''; position:absolute; bottom:-80px; left:-60px;
             width:250px; height:250px; background:rgba(255,255,255,.05); border-radius:50%;
         }
-        @keyframes floatY { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
-        .float { animation:floatY 3s ease-in-out infinite; }
+         }
+        .float {  }
 
         .btn-white {
             width:100%; background:#fff; color:#f97316;
@@ -289,20 +291,19 @@
         .tbar-fill::after {
             content:''; position:absolute; top:0; left:-100%; width:50%; height:100%;
             background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);
-            animation:shim 2s infinite;
+            
         }
-        @keyframes shim { to { left:200%; } }
+        
         .revrow {
             display:flex; justify-content:space-between; align-items:center;
             background:#f9fafb; border:1px solid #f3f4f6; border-radius:14px; padding:12px 14px;
         }
         .chart-sm { position:relative; width:100%; height:140px; }
-    </style>
+    
+</style>
 </head>
 <body>
-<div id="app">
-<div id="app">
-  <div class="top-bar">
+<div id="app">  <div class="top-bar">
     <div class="top-row">
       <span class="logo">티밋</span>
       <div class="icon-row">
@@ -311,7 +312,7 @@
       </div>
     </div>
     <div class="tabs">
-      <button class="tab" onclick="nav('s-col')">👩‍💻 동료 찾기</button>
+      <button class="tab">👩‍💻 동료 찾기</button>
       <button class="tab on">🏆 공모전 탐색</button>
     </div>
   </div>
@@ -387,46 +388,4 @@
   </div>
 </div>
 
-<!-- ═══════════════════ SMART CURATION ═══════════════════ -->
-</div>
-    box.style.borderColor='#fed7aa';
-  } else {
-    lbl.textContent='"혼신의 힘! 100% 에너지 투여"';
-    lbl.style.color='#dc2626'; ico.textContent='🔥';
-    box.style.background='linear-gradient(135deg,#fff1f2,#ffe4e6)';
-    box.style.borderColor='#fca5a5';
-  }
-}
-function pickG(btn, group) {
-  btn.closest('div').querySelectorAll('.period-btn').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on');
-}
-function drawChart() {
-  const ctx = document.getElementById('cc');
-  if(!ctx) return;
-  if(ci) ci.destroy();
-  ci = new Chart(ctx.getContext('2d'),{
-    type:'radar',
-    data:{
-      labels:['에너지(열정)','오프라인 선호','기간 적합도','스킬 매칭','소통 방식'],
-      datasets:[
-        {label:'나 (기획)',data:[90,80,100,85,90],fill:true,
-         backgroundColor:'rgba(255,255,255,.08)',borderColor:'rgba(255,255,255,.4)',
-         pointBackgroundColor:'#fff',borderWidth:1.5},
-        {label:'상대 (디자인)',data:[95,90,100,95,85],fill:true,
-         backgroundColor:'rgba(249,115,22,.25)',borderColor:'#f97316',
-         pointBackgroundColor:'#f97316',borderWidth:2}
-      ]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      scales:{r:{angleLines:{color:'rgba(255,255,255,.08)'},grid:{color:'rgba(255,255,255,.08)'},
-                 pointLabels:{font:{size:9,weight:'bold'},color:'#9ca3af'},
-                 ticks:{display:false,min:0,max:100}}},
-      plugins:{legend:{position:'bottom',labels:{font:{size:10},color:'#e5e7eb',usePointStyle:true,padding:12}}}
-    }
-  });
-}
-</script>
-</body>
-</html>
+</div></body></html>
